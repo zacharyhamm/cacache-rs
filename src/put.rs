@@ -383,12 +383,18 @@ impl WriteOpts {
                 cache: cache.to_path_buf(),
                 key: Some(String::from(key)),
                 written: 0,
-                writer: write::AsyncWriter::new(
+                writer: match write::AsyncWriter::new(
                     cache,
                     me.algorithm.unwrap_or(Algorithm::Sha256),
                     None,
                 )
-                .await?,
+                .await {
+                    Ok(res) => res,
+                    Err(err) => {
+                        dbg!(&err);
+                        return Err(err);
+                    }
+                },
                 opts: me,
             })
         }

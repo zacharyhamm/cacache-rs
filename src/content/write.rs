@@ -186,10 +186,14 @@ impl AsyncWriter {
                     last_op: None,
                 })))))
             }
-            _ => Err(Error::IoError(
-                std::io::Error::new(std::io::ErrorKind::Other, "temp file create error"),
-                "Possible memory issues for file handle".into(),
-            )),
+            err => {
+                dbg!(&err);
+
+                Err(Error::IoError(
+                    std::io::Error::new(std::io::ErrorKind::Other, "temp file create error"),
+                    "Possible memory issues for file handle".into(),
+                ))
+            }
         }
     }
 
@@ -223,6 +227,7 @@ impl AsyncWriter {
                                         )
                                     });
                                 if res.is_err() {
+                                    dbg!(&res);
                                     let _ = s.send(res.map(|_| sri));
                                 } else {
                                     let res = tmpfile
@@ -232,19 +237,24 @@ impl AsyncWriter {
                                             format!("persisting file {} failed", cpath.display())
                                         });
                                     if res.is_err() {
+                                        dbg!(&res);
                                         // We might run into conflicts
                                         // sometimes when persisting files.
                                         // This is ok. We can deal. Let's just
                                         // make sure the destination file
                                         // actually exists, and we can move
                                         // on.
-                                        let _ = s.send(
+                                        let res = s.send(
                                             std::fs::metadata(cpath)
                                                 .with_context(|| {
                                                     String::from("File still doesn't exist")
                                                 })
                                                 .map(|_| sri),
                                         );
+
+                                        if res.is_err() {
+                                            dbg!(&res);
+                                        }
                                     } else {
                                         let _ = s.send(res.map(|_| sri));
                                     }
